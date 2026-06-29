@@ -535,11 +535,18 @@
      **********************************************************************/
 
     const STUDY_TITLE = "40문항 Q-sort 설문";
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzlsXQRjEPgCfNYjqYTgpIl7W5k211mcRSBXQnULocePFg2F8zpZbpyoJqd9A2roUFgew/exec";
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzi1tmqzlamZGLv5S4S5bHwSRcFS1JhR1FCujkiOqXDxl8b6l0yPWe180zWh4ip6qrjcQ/exec";
 
     // Apps Script에 action=checkStudentId JSONP 중복확인 기능을 넣은 경우 true.
     // 해당 기능을 아직 넣지 않았다면 false로 바꾸세요.
     const CHECK_DUPLICATE_BEFORE_SUBMIT = false;
+
+    // 제출 오류 방지를 위해 기본 제출 방식은 hidden form + iframe으로 설정합니다.
+    // 이 방식은 CORS/fetch 리다이렉트 오류를 피하면서 Apps Script doPost(e)로 데이터를 보냅니다.
+    const SUBMIT_TRANSPORT = "hidden_form";
+
+    // 제출 시 응답 데이터를 브라우저 localStorage에도 임시 저장합니다.
+    const SAVE_LOCAL_BACKUP_ON_SUBMIT = true;
 
     // 학번/참여자코드 입력 필수 여부.
     const REQUIRE_STUDENT_ID = true;
@@ -683,7 +690,7 @@
     }
 
     function configuredWebAppUrl() {
-      return https://script.google.com/macros/s/AKfycbzlsXQRjEPgCfNYjqYTgpIl7W5k211mcRSBXQnULocePFg2F8zpZbpyoJqd9A2roUFgew/exec && !https://script.google.com/macros/s/AKfycbzlsXQRjEPgCfNYjqYTgpIl7W5k211mcRSBXQnULocePFg2F8zpZbpyoJqd9A2roUFgew/exec.includes("여기에_") && /^https:\/\/script\.google\.com\//.test(https://script.google.com/macros/s/AKfycbzlsXQRjEPgCfNYjqYTgpIl7W5k211mcRSBXQnULocePFg2F8zpZbpyoJqd9A2roUFgew/exec);
+      return WEB_APP_URL && !WEB_APP_URL.includes("여기에_") && /^https:\/\/script\.google\.com\//.test(WEB_APP_URL);
     }
 
     function showToast(message) {
@@ -949,8 +956,11 @@
      * 6. Google Sheets 제출 로직
      **********************************************************************/
 
-    function buildPayload() {
-      recordStepDuration();
+    function buildPayload(options) {
+      const opts = options || {};
+      if (opts.recordDuration !== false) {
+        recordStepDuration();
+      }
       const now = new Date();
       const scoreMap = buildScoreMap();
       const values = STATEMENTS.map((s) => Number(scoreMap[s.id]));
@@ -990,6 +1000,23 @@
       SCORE_COLUMNS.forEach((col) => {
         payload["quota_" + scoreLabel(col.score)] = String(col.count);
         payload["filled_" + scoreLabel(col.score)] = String(columnFilled(col.score));
+      });
+
+      // PQMethod 변환을 쉽게 하기 위해 q001~q040 형태도 함께 전송합니다.
+      STATEMENTS.forEach((s) => {
+        payload["q" + String(s.id).padStart(3, "0")] = String(scoreMap[s.id]);
+      });
+
+      payload.submitTransport = SUBMIT_TRANSPORT;
+      payload.rawClientJson = JSON.stringify({
+        studyTitle: STUDY_TITLE,
+        studentId: studentId,
+        urlUserCode: state.urlUserCode || "",
+        sort: payload.sort,
+        pre: state.pre,
+        comments: state.comments,
+        durations: state.durations,
+        submittedAtClient: now.toISOString()
       });
 
       return payload;
@@ -1038,7 +1065,7 @@
           reject(new Error("duplicate_check_timeout"));
         }, 10000);
 
-        script.src = appendQuery("https://script.google.com/macros/s/AKfycbzi1tmqzlamZGLv5S4S5bHwSRcFS1JhR1FCujkiOqXDxl8b6l0yPWe180zWh4ip6qrjcQ/exec", {
+        script.src = appendQuery(WEB_APP_URL, {
           action: "checkStudentId",
           studentId: studentId,
           callback: callbackName,
@@ -1049,7 +1076,120 @@
       });
     }
 
+    function saveCommentsFromReviewTextareas() {
+      document.querySelectorAll("[data-comment-id]").forEach((el) => {
+        state.comments[el.dataset.commentId] = el.value || "";
+      });
+    }
+
+    function saveLocalSubmissionBackup(payload) {
+      if (!SAVE_LOCAL_BACKUP_ON_SUBMIT) return;
+
+      try {
+        const key = "qsort_backup_" + (payload.studentId || "anonymous") + "_" + Date.now();
+        localStorage.setItem(key, JSON.stringify(payload));
+        localStorage.setItem("qsort_backup_latest", JSON.stringify(payload));
+      } catch (err) {
+        console.warn("localStorage backup failed", err);
+      }
+    }
+
+    function createHiddenInput(name, value) {
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = name;
+      input.value = value == null ? "" : String(value);
+      return input;
+    }
+
+    function postViaHiddenForm(payload) {
+      return new Promise((resolve, reject) => {
+        if (!configuredWebAppUrl()) {
+          reject(new Error("web_app_url_not_configured"));
+          return;
+        }
+
+        const iframeName = "qsortSubmitFrame_" + Date.now() + "_" + Math.floor(Math.random() * 1000000);
+        const iframe = document.createElement("iframe");
+        const form = document.createElement("form");
+        let submitted = false;
+        let finished = false;
+
+        function cleanupSoon() {
+          window.setTimeout(() => {
+            try { form.remove(); } catch (e) {}
+            try { iframe.remove(); } catch (e) {}
+          }, 1200);
+        }
+
+        function finish(result) {
+          if (finished) return;
+          finished = true;
+          window.clearTimeout(timeoutId);
+          cleanupSoon();
+          resolve(result || { ok: true });
+        }
+
+        const timeoutId = window.setTimeout(() => {
+          // Google Apps Script 응답은 iframe에서 읽지 않습니다.
+          // load 이벤트가 막혀도 POST 요청은 이미 전송되었을 가능성이 높으므로 완료 처리합니다.
+          finish({ ok: true, timeoutAssumed: true });
+        }, 9000);
+
+        iframe.name = iframeName;
+        iframe.id = iframeName;
+        iframe.style.display = "none";
+
+        iframe.addEventListener("load", () => {
+          if (!submitted) return;
+          finish({ ok: true, iframeLoaded: true });
+        });
+
+        form.method = "POST";
+        form.action = WEB_APP_URL;
+        form.target = iframeName;
+        form.enctype = "application/x-www-form-urlencoded";
+        form.acceptCharset = "UTF-8";
+        form.style.display = "none";
+
+        Object.keys(payload).forEach((key) => {
+          form.appendChild(createHiddenInput(key, payload[key]));
+        });
+
+        document.body.appendChild(iframe);
+        document.body.appendChild(form);
+
+        window.setTimeout(() => {
+          try {
+            submitted = true;
+            form.submit();
+          } catch (err) {
+            window.clearTimeout(timeoutId);
+            cleanupSoon();
+            reject(err);
+          }
+        }, 0);
+      });
+    }
+
+    async function postViaFetchNoCors(payload) {
+      const body = new URLSearchParams(payload);
+      await fetch(WEB_APP_URL, {
+        method: "POST",
+        mode: "no-cors",
+        body: body
+      });
+      return { ok: true };
+    }
+
     async function submitToGoogleSheets() {
+      if (state.isSubmitting) {
+        showToast("이미 제출을 처리 중입니다.");
+        return;
+      }
+
+      saveCommentsFromReviewTextareas();
+
       const validation = validatePlacement();
       if (!validation.ok) {
         alert(validation.message);
@@ -1057,6 +1197,8 @@
       }
 
       const studentId = cleanStudentId(state.studentId || state.urlUserCode);
+      state.studentId = studentId;
+
       if (REQUIRE_STUDENT_ID && !studentId) {
         alert("학번 또는 참여자코드를 입력해 주세요.");
         goToStep(0);
@@ -1069,44 +1211,51 @@
         return;
       }
 
+      let payload = null;
+
       try {
         state.isSubmitting = true;
-        setLoading(true, "중복 응답 확인 및 제출 중입니다...");
+        setLoading(true, CHECK_DUPLICATE_BEFORE_SUBMIT ? "중복 응답 확인 및 제출 요청 중입니다..." : "제출 요청 중입니다...");
 
         if (CHECK_DUPLICATE_BEFORE_SUBMIT) {
-          const check = await checkStudentIdViaJsonp(studentId);
+          let check;
+          try {
+            check = await checkStudentIdViaJsonp(studentId);
+          } catch (checkErr) {
+            console.warn("duplicate check skipped because it failed", checkErr);
+            const proceed = confirm("학번 중복 확인에 실패했습니다. 그래도 제출을 진행할까요?\n\n중복 차단은 Apps Script doPost 단계에서 한 번 더 처리할 수 있습니다.");
+            if (!proceed) return;
+          }
 
           if (check && check.invalid) {
             alert("학번 또는 참여자코드 형식이 올바르지 않습니다.");
             return;
           }
 
-          if (!check || check.ok !== true) {
-            alert("학번 중복 확인에 실패했습니다. 인터넷 연결 또는 Apps Script 설정을 확인해 주세요.");
-            return;
-          }
-
-          if (check.exists) {
+          if (check && check.exists) {
             alert("이미 제출된 학번/참여자코드입니다. 동일 코드로는 중복 응답할 수 없습니다.");
             return;
           }
         }
 
-        const payload = buildPayload();
-        const body = new URLSearchParams(payload);
+        payload = buildPayload({ recordDuration: true });
+        saveLocalSubmissionBackup(payload);
 
-        await fetch(WEB_APP_URL, {
-          method: "POST",
-          mode: "no-cors",
-          body: body,
-          keepalive: true
-        });
+        if (SUBMIT_TRANSPORT === "fetch") {
+          await postViaFetchNoCors(payload);
+        } else {
+          await postViaHiddenForm(payload);
+        }
 
         state.submittedAt = new Date();
         goToStep(4);
       } catch (err) {
         console.error(err);
-        alert("제출 중 오류가 발생했습니다. 인터넷 연결을 확인한 뒤 다시 시도해 주세요.");
+        if (payload) {
+          saveLocalSubmissionBackup(payload);
+        }
+        const backup = confirm("제출 요청 중 브라우저 오류가 발생했습니다. 응답 데이터는 브라우저에 임시 백업했습니다. JSON 백업 파일도 내려받겠습니까?");
+        if (backup) downloadLocalJson();
       } finally {
         state.isSubmitting = false;
         setLoading(false);
@@ -1114,7 +1263,8 @@
     }
 
     function downloadLocalJson() {
-      const payload = buildPayload();
+      saveCommentsFromReviewTextareas();
+      const payload = buildPayload({ recordDuration: false });
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -1453,7 +1603,7 @@
             <button type="button" onclick="goToStep(2)">← 다시 배치하기</button>
             <div>
               <button type="button" class="btn-light" onclick="downloadLocalJson()">JSON 백업 다운로드</button>
-              <button type="button" class="btn-primary" onclick="submitToGoogleSheets()">제출하기 →</button>
+              <button type="button" class="btn-primary" onclick="submitToGoogleSheets()" ${state.isSubmitting ? "disabled" : ""}>제출하기 →</button>
             </div>
           </div>
         </section>
@@ -1469,8 +1619,8 @@
     function renderDone() {
       appEl.innerHTML = `
         <section class="main-panel">
-          <h2>제출이 완료되었습니다.</h2>
-          <p>응답해 주셔서 감사합니다.</p>
+          <h2>제출 요청이 완료되었습니다.</h2>
+          <p>응답해 주셔서 감사합니다. 연구자는 Google Sheets의 responses 시트에서 저장 여부를 확인할 수 있습니다.</p>
           <div class="info-box soft">
             <p><b>제출 시각:</b> ${escapeHtml(state.submittedAt ? state.submittedAt.toLocaleString("ko-KR") : new Date().toLocaleString("ko-KR"))}</p>
             <p class="muted">브라우저의 no-cors 제출 방식 특성상 화면에서는 Google Sheets의 실제 응답 본문을 읽지 않습니다. 연구자는 Google Sheets의 responses 시트에서 저장 여부를 확인할 수 있습니다.</p>
@@ -1576,7 +1726,8 @@
      **********************************************************************/
 
     function startSurvey() {
-      const studentId = cleanStudentId(document.getElementById("studentIdInput")?.value || state.studentId);
+      const studentIdInput = document.getElementById("studentIdInput");
+      const studentId = cleanStudentId((studentIdInput && studentIdInput.value) || state.studentId);
       state.studentId = studentId;
 
       if (REQUIRE_STUDENT_ID && !studentId) {

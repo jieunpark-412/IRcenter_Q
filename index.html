@@ -1,0 +1,1656 @@
+
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Q-sort 카드형 격자 설문</title>
+  <style>
+    :root {
+      --bg: #f6f1e8;
+      --panel: #ffffff;
+      --panel2: #fffaf0;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --line: #d7dce2;
+      --line2: #c4cbd4;
+      --primary: #0d6efd;
+      --primary-dark: #0b5ed7;
+      --danger: #ef4444;
+      --green: #16a34a;
+      --shadow: 0 1px 6px rgba(15, 23, 42, 0.12);
+      --radius: 12px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+    }
+
+    button, input, textarea, select {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      border-radius: 8px;
+      padding: 10px 14px;
+      cursor: pointer;
+      background: #e5e7eb;
+      color: #111827;
+      transition: transform 0.04s ease, background 0.15s ease, opacity 0.15s ease;
+    }
+
+    button:hover { background: #d1d5db; }
+    button:active { transform: translateY(1px); }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-danger { background: #fee2e2; color: #991b1b; }
+    .btn-danger:hover { background: #fecaca; }
+    .btn-light { background: #f3f4f6; }
+    .btn-small { padding: 6px 8px; font-size: 12px; }
+
+    .app-shell {
+      max-width: 1480px;
+      margin: 0 auto;
+      padding: 0 10px 20px;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--line);
+      box-shadow: 0 1px 8px rgba(15, 23, 42, 0.06);
+    }
+
+    .stepper {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+      padding: 14px 10px;
+      flex-wrap: wrap;
+    }
+
+    .step-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .step-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #9ca3af;
+      color: #fff;
+      font-size: 14px;
+    }
+
+    .step-item.active { color: var(--primary); }
+    .step-item.active .step-num { background: var(--primary); }
+    .step-divider { color: #c4c4c4; }
+
+    .main-panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 18px;
+      margin-top: 12px;
+    }
+
+    .title-row {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    h1, h2, h3 { margin: 0 0 10px; line-height: 1.25; }
+    h1 { font-size: 24px; }
+    h2 { font-size: 22px; }
+    h3 { font-size: 17px; }
+
+    .muted { color: var(--muted); }
+    .strong { font-weight: 800; }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .info-box {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 14px;
+    }
+
+    .info-box.soft {
+      background: var(--panel2);
+      border-color: #f1dba5;
+    }
+
+    .quota-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      background: #fff;
+      overflow: hidden;
+      border-radius: 8px;
+    }
+
+    .quota-table th,
+    .quota-table td {
+      border: 1px solid #e5e7eb;
+      padding: 8px 9px;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .quota-table th { background: #f9fafb; }
+
+    .intro-list {
+      margin: 8px 0 0 18px;
+      padding: 0;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 180px minmax(0, 1fr);
+      gap: 10px;
+      align-items: center;
+      margin: 10px 0;
+    }
+
+    .input {
+      width: 100%;
+      border: 1px solid var(--line2);
+      border-radius: 8px;
+      padding: 10px 12px;
+      background: #fff;
+    }
+
+    .actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-top: 14px;
+      flex-wrap: wrap;
+    }
+
+    .actions.center { justify-content: center; }
+
+    .pre-layout {
+      display: grid;
+      grid-template-columns: 320px repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      align-items: stretch;
+    }
+
+    .pre-pool,
+    .pre-bucket {
+      background: #f9fafb;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      min-height: 520px;
+      padding: 12px;
+      box-shadow: var(--shadow);
+    }
+
+    .pre-bucket.disagree { background: #fff5f5; }
+    .pre-bucket.neutral { background: #fbfbfb; }
+    .pre-bucket.agree { background: #f0fdf4; }
+
+    .bucket-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 28px;
+      height: 24px;
+      border-radius: 999px;
+      padding: 0 8px;
+      background: #e5e7eb;
+      color: #111827;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .card-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 660px;
+      overflow: auto;
+      padding-right: 3px;
+    }
+
+    .q-card {
+      border: 1px solid #b8c7d9;
+      background: linear-gradient(180deg, #f8fbff, #eef6ff);
+      border-radius: 8px;
+      padding: 9px 10px;
+      cursor: grab;
+      user-select: none;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+    }
+
+    .q-card:active { cursor: grabbing; }
+    .q-card.dragging { opacity: 0.5; }
+    .q-card.selected {
+      outline: 3px solid rgba(13, 110, 253, 0.35);
+      border-color: var(--primary);
+    }
+
+    .q-card .qid {
+      font-weight: 900;
+      margin-bottom: 3px;
+    }
+
+    .q-card .qtext {
+      font-size: 13px;
+      line-height: 1.45;
+      word-break: keep-all;
+    }
+
+    .pre-card-actions {
+      display: flex;
+      gap: 5px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+
+    .qsort-layout {
+      display: grid;
+      grid-template-columns: 300px minmax(0, 1fr);
+      gap: 12px;
+    }
+
+    .side-panel {
+      background: #f9fafb;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 12px;
+      min-height: 620px;
+    }
+
+    .selected-hint {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      color: #1e3a8a;
+      border-radius: 8px;
+      padding: 8px 10px;
+      margin-bottom: 10px;
+      font-size: 13px;
+    }
+
+    .qdist-summary {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 12px 14px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+
+    .score-grid-wrap {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 12px;
+      overflow-x: auto;
+    }
+
+    .score-grid {
+      display: grid;
+      grid-template-columns: repeat(9, minmax(104px, 1fr));
+      gap: 8px;
+      min-width: 980px;
+    }
+
+    .score-col {
+      min-width: 104px;
+    }
+
+    .score-head {
+      border: 1px solid var(--line);
+      border-radius: 8px 8px 0 0;
+      text-align: center;
+      padding: 9px 6px;
+      font-weight: 900;
+      min-height: 78px;
+    }
+
+    .score-head.negative { background: linear-gradient(180deg, #fecaca, #fee2e2); }
+    .score-head.neutral { background: linear-gradient(180deg, #e5e7eb, #f3f4f6); }
+    .score-head.positive { background: linear-gradient(180deg, #bbf7d0, #dcfce7); }
+
+    .quota-label {
+      margin-top: 5px;
+      font-size: 12px;
+      line-height: 1.35;
+      font-weight: 600;
+      color: #374151;
+    }
+
+    .score-head.quota-full .quota-label { color: #166534; }
+    .score-head.quota-open .quota-label { color: #6b7280; }
+
+    .slots {
+      border-left: 1px solid var(--line);
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      border-radius: 0 0 8px 8px;
+      padding: 8px;
+      background: #fcfcfc;
+      min-height: 465px;
+    }
+
+    .slot {
+      min-height: 48px;
+      border: 2px dashed #d1d5db;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.75);
+      transition: background 0.12s ease, border-color 0.12s ease;
+      padding: 4px;
+    }
+
+    .slot:last-child { margin-bottom: 0; }
+    .slot.drag-over { background: #eff6ff; border-color: var(--primary); }
+    .slot .slot-card {
+      width: 100%;
+      min-height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #d1d5db;
+      border-radius: 7px;
+      background: #fff;
+      font-weight: 900;
+      cursor: grab;
+      padding: 7px 4px;
+      text-align: center;
+    }
+
+    .slot .slot-card.selected {
+      border-color: var(--primary);
+      outline: 3px solid rgba(13, 110, 253, 0.25);
+    }
+
+    .slot-empty-text {
+      color: #9ca3af;
+      font-size: 12px;
+    }
+
+    .pool-drop {
+      border: 2px dashed transparent;
+      border-radius: 10px;
+      padding: 4px;
+      min-height: 160px;
+    }
+
+    .pool-drop.drag-over {
+      border-color: var(--primary);
+      background: #eff6ff;
+    }
+
+    .bottom-tip {
+      background: #fff8db;
+      border: 1px solid #f2d675;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-top: 12px;
+      color: #6b4e00;
+      font-size: 14px;
+    }
+
+    .review-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .extreme-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .comment-box {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      padding: 12px;
+    }
+
+    .comment-box textarea {
+      width: 100%;
+      min-height: 80px;
+      border: 1px solid var(--line2);
+      border-radius: 8px;
+      padding: 10px;
+      resize: vertical;
+    }
+
+    .toast {
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      max-width: 420px;
+      z-index: 100;
+      padding: 12px 14px;
+      border-radius: 10px;
+      background: #111827;
+      color: #fff;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.22);
+      display: none;
+    }
+
+    .toast.show { display: block; }
+
+    .loading-cover {
+      position: fixed;
+      inset: 0;
+      background: rgba(255, 255, 255, 0.68);
+      backdrop-filter: blur(3px);
+      z-index: 90;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      color: #111827;
+    }
+
+    .loading-cover.show { display: flex; }
+
+    @media (max-width: 1100px) {
+      .grid-3, .review-grid { grid-template-columns: 1fr; }
+      .pre-layout { grid-template-columns: 1fr; }
+      .qsort-layout { grid-template-columns: 1fr; }
+      .side-panel { min-height: auto; }
+      .card-list { max-height: 360px; }
+    }
+
+    @media print {
+      .topbar, .actions, .bottom-tip, .side-panel { display: none !important; }
+      body { background: #fff; }
+      .main-panel, .score-grid-wrap, .info-box { box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div id="stepper" class="stepper"></div>
+  </div>
+
+  <main class="app-shell">
+    <div id="app"></div>
+  </main>
+
+  <div id="toast" class="toast"></div>
+  <div id="loading" class="loading-cover">처리 중입니다...</div>
+
+  <script>
+    /**********************************************************************
+     * 1. 반드시 수정할 설정값
+     **********************************************************************/
+
+    const STUDY_TITLE = "40문항 Q-sort 설문";
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzi1tmqzlamZGLv5S4S5bHwSRcFS1JhR1FCujkiOqXDxl8b6l0yPWe180zWh4ip6qrjcQ/exec";
+
+    // Apps Script에 action=checkStudentId JSONP 중복확인 기능을 넣은 경우 true.
+    // 해당 기능을 아직 넣지 않았다면 false로 바꾸세요.
+    const CHECK_DUPLICATE_BEFORE_SUBMIT = true;
+
+    // 학번/참여자코드 입력 필수 여부.
+    const REQUIRE_STUDENT_ID = true;
+
+    // 40문항 권장 강제분포: 2-3-5-6-8-6-5-3-2.
+    const SCORE_COLUMNS = [
+      { score: -4, count: 2 },
+      { score: -3, count: 3 },
+      { score: -2, count: 5 },
+      { score: -1, count: 6 },
+      { score: 0, count: 8 },
+      { score: 1, count: 6 },
+      { score: 2, count: 5 },
+      { score: 3, count: 3 },
+      { score: 4, count: 2 }
+    ];
+
+    // 아래 40개 문항을 실제 연구 문항으로 교체하세요.
+    // id는 반드시 1부터 40까지 중복 없이 유지하는 것을 권장합니다.
+    const STATEMENTS = [
+      { id: 1, text: "문항 1: 최근 수업 진도를 따라가기 어려워 결석하거나 과제를 미루는 일이 잦아졌다." },
+      { id: 2, text: "문항 2: 기대했던 전공과 실제 수업 내용이 달라 전공을 계속해야 할지 흔들린다." },
+      { id: 3, text: "문항 3: 성적이 낮아질수록 이 학교에서 버틸 수 있을지 자신감이 떨어진다." },
+      { id: 4, text: "문항 4: 학교에서 작은 성취감도 잘 느끼지 못해 재학의 의미가 약해지고 있다." },
+      { id: 5, text: "문항 5: 지금 배우는 내용이 내 미래 진로와 연결된다고 느껴지지 않는다." },
+      { id: 6, text: "문항 6: 전공이나 학과가 내 흥미·적성·생활방식과 맞지 않는다고 느낀다." },
+      { id: 7, text: "문항 7: 수업보다 아르바이트·실습·현장 경험이 내 미래에 더 도움이 된다고 느낀다." },
+      { id: 8, text: "문항 8: 대학 생활의 규칙과 리듬(출석, 과제, 팀활동)에 적응하는 것이 어렵다." },
+      { id: 9, text: "문항 9: 졸업해도 원하는 일자리를 얻을 수 있을지 확신이 없어 학업 의욕이 줄어든다." },
+      { id: 10, text: "문항 10: 지금 학교에 남는 것보다 다른 진로를 바로 준비하는 편이 현실적이라고 느낀다." },
+      { id: 11, text: "문항 11: 무엇을 목표로 대학을 다니는지 분명하지 않아 계속 다녀야 할 이유가 약해진다." },
+      { id: 12, text: "문항 12: 빨리 돈을 벌거나 경력을 쌓는 것이 학업을 계속하는 것보다 더 시급하다." },
+      { id: 13, text: "문항 13: 학위보다 자격증, 포트폴리오, 실무경험이 내게 더 중요하다고 느낀다." },
+      { id: 14, text: "문항 14: 졸업장이 내 삶을 크게 바꿔줄 것 같지 않아 재학 동기가 약해진다." },
+      { id: 15, text: "문항 15: 대학에 머무는 동안 오히려 진로 결정이 늦어지고 있다고 느낀다." },
+      { id: 16, text: "문항 16: 등록금, 생활비, 교통비 등 비용 부담 때문에 학업을 계속하기 어렵다." },
+      { id: 17, text: "문항 17: 가족이나 나의 경제 상황을 생각하면 학교보다 생계가 우선이라고 느낀다." },
+      { id: 18, text: "문항 18: 대학에 쓰는 시간과 비용에 비해 얻는 것이 적다고 느낀다." },
+      { id: 19, text: "문항 19: 아르바이트나 취업 준비 때문에 수업·과제에 충분히 집중하기 어렵다." },
+      { id: 20, text: "문항 20: 장학금·생활비·학업지원이 더 현실적으로 제공된다면 계속 다닐 수 있을 것 같다." },
+      { id: 21, text: "문항 21: 최근 지치고 무기력해서 수업이나 학교생활을 시작하는 것 자체가 부담스럽다." },
+      { id: 22, text: "문항 22: 스트레스가 누적되어 학교를 잠시 멈추거나 떠나고 싶다는 생각이 든다." },
+      { id: 23, text: "문항 23: 학교 안에서 혼자 남겨진 느낌이 들어 도움을 요청하기 어렵다." },
+      { id: 24, text: "문항 24: 불안, 우울, 수면문제 등으로 공부를 지속하기 어렵다." },
+      { id: 25, text: "문항 25: 학교생활을 생각하면 기대감보다 걱정과 압박감이 더 크다." },
+      { id: 26, text: "문항 26: 지금은 학업을 밀어붙이기보다 회복할 시간이 필요하다고 느낀다." },
+      { id: 27, text: "문항 27: 학교에서 마음 놓고 이야기할 친구나 선배가 부족하다." },
+      { id: 28, text: "문항 28: 교수, 조교, 상담센터, 행정부서직원 중 누구에게 도움을 요청해야 할지 잘 모르겠다." },
+      { id: 29, text: "문항 29: 이 학교나 학과에 소속되어 있다는 느낌이 약하다." },
+      { id: 30, text: "문항 30: 학교의 지원제도가 내 어려움을 해결하기에는 멀고 복잡하게 느껴진다." },
+      { id: 31, text: "문항 31: 캠퍼스 생활이나 학과 분위기에 만족하지 못해 학교에 머물고 싶은 마음이 줄어든다." },
+      { id: 32, text: "문항 32: 가족의 기대나 압박 때문에 학교를 계속 다니는 것이 더 힘들게 느껴진다." },
+      { id: 33, text: "문항 33: 주변 사람이 휴학·자퇴·취업한 사례를 보거나 들으면 마음이 흔들린다." },
+      { id: 34, text: "문항 34: 대학을 졸업하지 않아도 성공할 수 있다는 생각이 내 선택에 영향을 준다." },
+      { id: 35, text: "문항 35: 가족은 계속 다니길 원하지만, 나는 다른 선택을 해야 할지도 모른다고 느낀다." },
+      { id: 36, text: "문항 36: 사회가 학위를 지나치게 중요하게 보지만, 그것이 내 현실 문제를 해결해 주지는 않는다고 느낀다." },
+      { id: 37, text: "문항 37: 자퇴를 아직 결정한 것은 아니지만, 오래전부터 계속 고민해 왔다." },
+      { id: 38, text: "문항 38: 학교를 떠나는 선택이 실패라기보다 내 상황을 바꾸는 방법일 수 있다고 느낀다." },
+      { id: 39, text: "문항 39: 지금 상태가 계속된다면 학교에 남는 것보다 떠나는 것이 내 삶에 더 도움이 될 것 같다." },
+      { id: 40, text: "문항 40: 중도탈락을 고민하면서 내가 어떤 지원을 받으면 계속 다닐 수 있을지 생각해본 경험이 있다" }
+    ];
+
+    /**********************************************************************
+     * 2. 내부 상태값
+     **********************************************************************/
+
+    const STEP_LABELS = ["안내", "예비분류", "배치하기", "최종확인"];
+    const appEl = document.getElementById("app");
+    const stepperEl = document.getElementById("stepper");
+    const toastEl = document.getElementById("toast");
+    const loadingEl = document.getElementById("loading");
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlUserCode = cleanStudentId(urlParams.get("userCode") || "");
+
+    const state = {
+      step: 0,
+      startedAt: new Date(),
+      stepStartedAt: Date.now(),
+      durations: [0, 0, 0, 0, 0, 0],
+      studentId: urlUserCode,
+      urlUserCode: urlUserCode,
+      pre: {
+        pool: STATEMENTS.map((s) => s.id),
+        disagree: [],
+        neutral: [],
+        agree: []
+      },
+      gridInitialized: false,
+      placementPool: [],
+      grid: {},
+      selectedCardId: null,
+      comments: {},
+      isSubmitting: false,
+      submittedAt: null
+    };
+
+    /**********************************************************************
+     * 3. 공통 유틸
+     **********************************************************************/
+
+    function escapeHtml(value) {
+      return String(value == null ? "" : value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function statementById(id) {
+      return STATEMENTS.find((s) => Number(s.id) === Number(id));
+    }
+
+    function qid(id) {
+      return "Q" + String(id).padStart(2, "0");
+    }
+
+    function scoreLabel(score) {
+      return score > 0 ? "+" + score : String(score);
+    }
+
+    function cleanStudentId(value) {
+      const text = String(value || "").trim();
+      if (!text || text === "---" || text.toLowerCase() === "undefined") return "";
+      return text.replace(/[\s-]/g, "");
+    }
+
+    function totalStatementCount() {
+      return STATEMENTS.length;
+    }
+
+    function totalSlotCount() {
+      return SCORE_COLUMNS.reduce((sum, col) => sum + col.count, 0);
+    }
+
+    function countBySign(sign) {
+      return SCORE_COLUMNS
+        .filter((col) => sign === "negative" ? col.score < 0 : sign === "positive" ? col.score > 0 : col.score === 0)
+        .reduce((sum, col) => sum + col.count, 0);
+    }
+
+    function configuredWebAppUrl() {
+      return WEB_APP_URL && !WEB_APP_URL.includes("여기에_") && /^https:\/\/script\.google\.com\//.test(WEB_APP_URL);
+    }
+
+    function showToast(message) {
+      toastEl.textContent = message;
+      toastEl.classList.add("show");
+      window.clearTimeout(showToast._timer);
+      showToast._timer = window.setTimeout(() => toastEl.classList.remove("show"), 2800);
+    }
+
+    function setLoading(isLoading, message) {
+      loadingEl.textContent = message || "처리 중입니다...";
+      loadingEl.classList.toggle("show", !!isLoading);
+    }
+
+    function recordStepDuration() {
+      const now = Date.now();
+      state.durations[state.step] += Math.round((now - state.stepStartedAt) / 1000);
+      state.stepStartedAt = now;
+    }
+
+    function goToStep(nextStep) {
+      recordStepDuration();
+      state.step = nextStep;
+      state.stepStartedAt = Date.now();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      render();
+    }
+
+    function renderStepper() {
+      stepperEl.innerHTML = STEP_LABELS.map((label, idx) => {
+        const active = state.step === idx ? "active" : "";
+        const divider = idx < STEP_LABELS.length - 1 ? `<span class="step-divider">+</span>` : "";
+        return `
+          <div class="step-item ${active}">
+            <span class="step-num">${idx + 1}</span>
+            <span>${escapeHtml(label)}</span>
+          </div>
+          ${divider}
+        `;
+      }).join("");
+    }
+
+    /**********************************************************************
+     * 4. 예비분류 로직
+     **********************************************************************/
+
+    function removeFromPreEverywhere(cardId) {
+      ["pool", "disagree", "neutral", "agree"].forEach((bucket) => {
+        state.pre[bucket] = state.pre[bucket].filter((id) => Number(id) !== Number(cardId));
+      });
+    }
+
+    function movePre(cardId, bucket) {
+      removeFromPreEverywhere(cardId);
+      state.pre[bucket].push(Number(cardId));
+      state.gridInitialized = false;
+      render();
+    }
+
+    function returnPreToPool(cardId) {
+      removeFromPreEverywhere(cardId);
+      state.pre.pool.push(Number(cardId));
+      state.pre.pool.sort((a, b) => a - b);
+      state.gridInitialized = false;
+      render();
+    }
+
+    function preCompletedCount() {
+      return state.pre.disagree.length + state.pre.neutral.length + state.pre.agree.length;
+    }
+
+    function isPreComplete() {
+      return preCompletedCount() === totalStatementCount() && state.pre.pool.length === 0;
+    }
+
+    /**********************************************************************
+     * 5. 격자 배치 로직
+     **********************************************************************/
+
+    function initializeGrid() {
+      state.grid = {};
+      SCORE_COLUMNS.forEach((col) => {
+        state.grid[col.score] = Array.from({ length: col.count }, () => null);
+      });
+
+      state.placementPool = [
+        ...state.pre.disagree,
+        ...state.pre.neutral,
+        ...state.pre.agree
+      ];
+
+      STATEMENTS.forEach((s) => {
+        if (!state.placementPool.includes(s.id)) state.placementPool.push(s.id);
+      });
+
+      state.selectedCardId = null;
+      state.gridInitialized = true;
+    }
+
+    function ensureGridInitialized() {
+      if (!state.gridInitialized) initializeGrid();
+    }
+
+    function getCardLocation(cardId) {
+      const id = Number(cardId);
+      if (state.placementPool.includes(id)) {
+        return { type: "pool" };
+      }
+
+      for (const col of SCORE_COLUMNS) {
+        const slots = state.grid[col.score] || [];
+        for (let i = 0; i < slots.length; i++) {
+          if (Number(slots[i]) === id) {
+            return { type: "slot", score: col.score, slotIndex: i };
+          }
+        }
+      }
+
+      return { type: "unknown" };
+    }
+
+    function removeFromPlacementPool(cardId) {
+      const id = Number(cardId);
+      state.placementPool = state.placementPool.filter((x) => Number(x) !== id);
+    }
+
+    function addToPlacementPool(cardId) {
+      const id = Number(cardId);
+      if (!state.placementPool.includes(id)) {
+        state.placementPool.push(id);
+      }
+    }
+
+    function movePlacementToSlot(cardId, targetScore, targetSlotIndex) {
+      ensureGridInitialized();
+      const id = Number(cardId);
+      const score = Number(targetScore);
+      const slotIndex = Number(targetSlotIndex);
+      const targetSlots = state.grid[score];
+      if (!targetSlots) return;
+
+      const from = getCardLocation(id);
+      if (from.type === "slot" && Number(from.score) === score && Number(from.slotIndex) === slotIndex) {
+        return;
+      }
+
+      const targetCard = targetSlots[slotIndex];
+
+      if (from.type === "slot") {
+        const sourceSlots = state.grid[from.score];
+        sourceSlots[from.slotIndex] = targetCard || null;
+      } else {
+        removeFromPlacementPool(id);
+        if (targetCard) addToPlacementPool(targetCard);
+      }
+
+      targetSlots[slotIndex] = id;
+      state.selectedCardId = null;
+      render();
+    }
+
+    function movePlacementToPool(cardId) {
+      ensureGridInitialized();
+      const id = Number(cardId);
+      const from = getCardLocation(id);
+
+      if (from.type === "slot") {
+        state.grid[from.score][from.slotIndex] = null;
+        addToPlacementPool(id);
+        state.selectedCardId = null;
+        render();
+      }
+    }
+
+    function selectCard(cardId) {
+      const id = Number(cardId);
+      state.selectedCardId = state.selectedCardId === id ? null : id;
+      render();
+    }
+
+    function placedCount() {
+      ensureGridInitialized();
+      let count = 0;
+      SCORE_COLUMNS.forEach((col) => {
+        (state.grid[col.score] || []).forEach((id) => {
+          if (id) count++;
+        });
+      });
+      return count;
+    }
+
+    function columnFilled(score) {
+      ensureGridInitialized();
+      return (state.grid[score] || []).filter(Boolean).length;
+    }
+
+    function columnRemaining(score) {
+      const col = SCORE_COLUMNS.find((c) => Number(c.score) === Number(score));
+      return col.count - columnFilled(score);
+    }
+
+    function validatePlacement() {
+      ensureGridInitialized();
+      const ids = [];
+      const scoreMap = {};
+
+      SCORE_COLUMNS.forEach((col) => {
+        (state.grid[col.score] || []).forEach((cardId) => {
+          if (cardId) {
+            ids.push(Number(cardId));
+            scoreMap[Number(cardId)] = Number(col.score);
+          }
+        });
+      });
+
+      if (totalSlotCount() !== totalStatementCount()) {
+        return { ok: false, message: "강제분포 칸 수와 문항 수가 일치하지 않습니다." };
+      }
+
+      if (ids.length !== totalStatementCount()) {
+        return { ok: false, message: `아직 배치하지 않은 카드가 ${totalStatementCount() - ids.length}개 있습니다.` };
+      }
+
+      const unique = new Set(ids);
+      if (unique.size !== totalStatementCount()) {
+        return { ok: false, message: "중복 배치된 문항이 있습니다. 새로고침 후 다시 확인해 주세요." };
+      }
+
+      for (const s of STATEMENTS) {
+        if (scoreMap[s.id] === undefined) {
+          return { ok: false, message: `${qid(s.id)} 문항이 배치되지 않았습니다.` };
+        }
+      }
+
+      return { ok: true, message: "ok" };
+    }
+
+    function buildScoreMap() {
+      ensureGridInitialized();
+      const scoreMap = {};
+      SCORE_COLUMNS.forEach((col) => {
+        (state.grid[col.score] || []).forEach((cardId) => {
+          if (cardId) scoreMap[Number(cardId)] = Number(col.score);
+        });
+      });
+      return scoreMap;
+    }
+
+    function sortString() {
+      const scoreMap = buildScoreMap();
+      return STATEMENTS.map((s) => scoreMap[s.id]).join("|");
+    }
+
+    function extremeStatementIds() {
+      const scoreMap = buildScoreMap();
+      return STATEMENTS
+        .filter((s) => scoreMap[s.id] === -4 || scoreMap[s.id] === 4)
+        .sort((a, b) => scoreMap[a.id] - scoreMap[b.id] || a.id - b.id)
+        .map((s) => s.id);
+    }
+
+    /**********************************************************************
+     * 6. Google Sheets 제출 로직
+     **********************************************************************/
+
+    function buildPayload() {
+      recordStepDuration();
+      const now = new Date();
+      const scoreMap = buildScoreMap();
+      const values = STATEMENTS.map((s) => Number(scoreMap[s.id]));
+      const npos = values.filter((v) => v > 0).length;
+      const nneu = values.filter((v) => v === 0).length;
+      const nneg = values.filter((v) => v < 0).length;
+      const studentId = cleanStudentId(state.studentId || state.urlUserCode);
+
+      const payload = {
+        studyTitle: STUDY_TITLE,
+        name: STUDY_TITLE,
+        datetime: now.toISOString(),
+        localDatetime: now.toLocaleString("ko-KR"),
+        studentId: studentId,
+        userInputId: studentId,
+        urlUserCode: state.urlUserCode || "",
+        accessCode: "",
+        sort: sortString(),
+        npos: String(npos),
+        nneu: String(nneu),
+        nneg: String(nneg),
+        preDisagree: state.pre.disagree.join("|"),
+        preNeutral: state.pre.neutral.join("|"),
+        preAgree: state.pre.agree.join("|"),
+        userAgent: navigator.userAgent,
+        form0: studentId
+      };
+
+      state.durations.forEach((sec, idx) => {
+        payload["dur" + idx] = String(sec || 0);
+      });
+
+      Object.keys(state.comments).forEach((id) => {
+        payload["comment" + id] = state.comments[id] || "";
+      });
+
+      SCORE_COLUMNS.forEach((col) => {
+        payload["quota_" + scoreLabel(col.score)] = String(col.count);
+        payload["filled_" + scoreLabel(col.score)] = String(columnFilled(col.score));
+      });
+
+      return payload;
+    }
+
+    function buildQuery(params) {
+      return Object.keys(params)
+        .map((key) => encodeURIComponent(key) + "=" + encodeURIComponent(params[key]))
+        .join("&");
+    }
+
+    function appendQuery(url, params) {
+      const separator = url.indexOf("?") === -1 ? "?" : "&";
+      return url + separator + buildQuery(params);
+    }
+
+    function checkStudentIdViaJsonp(studentId) {
+      return new Promise((resolve, reject) => {
+        if (!configuredWebAppUrl()) {
+          resolve({ ok: true, exists: false, skipped: true });
+          return;
+        }
+
+        const callbackName = "qsortDuplicateCheck_" + Date.now() + "_" + Math.floor(Math.random() * 1000000);
+        const script = document.createElement("script");
+        let timer = null;
+
+        function cleanup() {
+          if (timer) window.clearTimeout(timer);
+          try { delete window[callbackName]; } catch (e) { window[callbackName] = undefined; }
+          if (script.parentNode) script.parentNode.removeChild(script);
+        }
+
+        window[callbackName] = (result) => {
+          cleanup();
+          resolve(result || { ok: false });
+        };
+
+        script.onerror = () => {
+          cleanup();
+          reject(new Error("duplicate_check_failed"));
+        };
+
+        timer = window.setTimeout(() => {
+          cleanup();
+          reject(new Error("duplicate_check_timeout"));
+        }, 10000);
+
+        script.src = appendQuery("https://script.google.com/macros/s/AKfycbzi1tmqzlamZGLv5S4S5bHwSRcFS1JhR1FCujkiOqXDxl8b6l0yPWe180zWh4ip6qrjcQ/exec", {
+          action: "checkStudentId",
+          studentId: studentId,
+          callback: callbackName,
+          _: Date.now()
+        });
+
+        document.head.appendChild(script);
+      });
+    }
+
+    async function submitToGoogleSheets() {
+      const validation = validatePlacement();
+      if (!validation.ok) {
+        alert(validation.message);
+        return;
+      }
+
+      const studentId = cleanStudentId(state.studentId || state.urlUserCode);
+      if (REQUIRE_STUDENT_ID && !studentId) {
+        alert("학번 또는 참여자코드를 입력해 주세요.");
+        goToStep(0);
+        return;
+      }
+
+      if (!configuredWebAppUrl()) {
+        const proceed = confirm("Google Apps Script URL이 아직 설정되지 않았습니다. 제출 대신 응답 데이터를 JSON 파일로 내려받겠습니까?");
+        if (proceed) downloadLocalJson();
+        return;
+      }
+
+      try {
+        state.isSubmitting = true;
+        setLoading(true, "중복 응답 확인 및 제출 중입니다...");
+
+        if (CHECK_DUPLICATE_BEFORE_SUBMIT) {
+          const check = await checkStudentIdViaJsonp(studentId);
+
+          if (check && check.invalid) {
+            alert("학번 또는 참여자코드 형식이 올바르지 않습니다.");
+            return;
+          }
+
+          if (!check || check.ok !== true) {
+            alert("학번 중복 확인에 실패했습니다. 인터넷 연결 또는 Apps Script 설정을 확인해 주세요.");
+            return;
+          }
+
+          if (check.exists) {
+            alert("이미 제출된 학번/참여자코드입니다. 동일 코드로는 중복 응답할 수 없습니다.");
+            return;
+          }
+        }
+
+        const payload = buildPayload();
+        const body = new URLSearchParams(payload);
+
+        await fetch(WEB_APP_URL, {
+          method: "POST",
+          mode: "no-cors",
+          body: body,
+          keepalive: true
+        });
+
+        state.submittedAt = new Date();
+        goToStep(4);
+      } catch (err) {
+        console.error(err);
+        alert("제출 중 오류가 발생했습니다. 인터넷 연결을 확인한 뒤 다시 시도해 주세요.");
+      } finally {
+        state.isSubmitting = false;
+        setLoading(false);
+      }
+    }
+
+    function downloadLocalJson() {
+      const payload = buildPayload();
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "qsort_response_" + (payload.studentId || "anonymous") + ".json";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    /**********************************************************************
+     * 7. 화면 렌더링
+     **********************************************************************/
+
+    function renderCard(cardId, options) {
+      const st = statementById(cardId);
+      const selected = state.selectedCardId === Number(cardId) ? "selected" : "";
+      const mode = options && options.mode ? options.mode : "full";
+      const draggable = options && options.draggable === false ? "false" : "true";
+      const extraClass = options && options.extraClass ? options.extraClass : "";
+
+      if (!st) return "";
+
+      if (mode === "slot") {
+        return `
+          <div class="slot-card ${selected}" draggable="${draggable}" data-card-id="${st.id}" title="${escapeHtml(st.text)}">
+            ${escapeHtml(qid(st.id))}
+          </div>
+        `;
+      }
+
+      return `
+        <div class="q-card ${selected} ${extraClass}" draggable="${draggable}" data-card-id="${st.id}">
+          <div class="qid">${escapeHtml(qid(st.id))}</div>
+          <div class="qtext">${escapeHtml(st.text)}</div>
+          ${mode === "pre" ? `
+            <div class="pre-card-actions">
+              <button class="btn-small" data-pre-move="disagree" data-card-id="${st.id}" type="button">비동의</button>
+              <button class="btn-small" data-pre-move="neutral" data-card-id="${st.id}" type="button">중립</button>
+              <button class="btn-small" data-pre-move="agree" data-card-id="${st.id}" type="button">동의</button>
+            </div>
+          ` : ""}
+          ${mode === "bucket" ? `
+            <div class="pre-card-actions">
+              <button class="btn-small" data-pre-return="true" data-card-id="${st.id}" type="button">다시 분류</button>
+            </div>
+          ` : ""}
+        </div>
+      `;
+    }
+
+    function renderIntro() {
+      appEl.innerHTML = `
+        <section class="main-panel">
+          <div class="title-row">
+            <div>
+              <h1>${escapeHtml(STUDY_TITLE)}</h1>
+              <p class="muted">40개 문항을 전체적으로 비교하여 본인의 생각과 가까운 순서대로 배치하는 카드형 Q-sort 설문입니다.</p>
+            </div>
+          </div>
+
+          <div class="grid-3">
+            <div class="info-box soft">
+              <h3>진행 방식</h3>
+              <ol class="intro-list">
+                <li>40개 문항을 비동의 / 중립 / 동의로 예비분류합니다.</li>
+                <li>점수표의 빈 칸에 문항 카드를 배치합니다.</li>
+                <li>최종 화면에서 전체 배치를 다시 확인한 뒤 제출합니다.</li>
+              </ol>
+            </div>
+
+            <div class="info-box">
+              <h3>강제분포</h3>
+              ${renderQuotaTable(false)}
+            </div>
+
+            <div class="info-box">
+              <h3>참여자 정보</h3>
+              <div class="form-row">
+                <label for="studentIdInput">학번/참여자코드</label>
+                <input id="studentIdInput" class="input" value="${escapeHtml(state.studentId)}" placeholder="예: 20231234 또는 P001" ${urlUserCode ? "readonly" : ""} />
+              </div>
+              ${urlUserCode ? `<p class="muted">URL의 userCode 값이 자동 적용되었습니다.</p>` : `<p class="muted">동일 학번 중복응답 제한을 사용하는 경우 반드시 입력하게 하세요.</p>`}
+            </div>
+          </div>
+
+          <div class="info-box soft" style="margin-top:12px;">
+            <h3>응답 안내</h3>
+            <p>
+              이 설문은 각 문항을 독립적으로 평가하는 방식이 아니라, <span class="strong">40개 문항 전체를 서로 비교</span>하는 방식입니다.
+              어느 문항에 조금 동의하더라도 다른 문항보다 상대적으로 덜 동의하면 더 가운데나 왼쪽에 배치할 수 있습니다.
+            </p>
+            <p>
+              최종 배치 가능 칸 수는 비동의 쪽 ${countBySign("negative")}칸, 중립 ${countBySign("neutral")}칸, 동의 쪽 ${countBySign("positive")}칸입니다.
+            </p>
+          </div>
+
+          <div class="actions">
+            <button type="button" class="btn-light" onclick="resetAll()">전체 초기화</button>
+            <button type="button" class="btn-primary" onclick="startSurvey()">다음 단계: 예비분류</button>
+          </div>
+        </section>
+      `;
+
+      const input = document.getElementById("studentIdInput");
+      if (input) {
+        input.addEventListener("input", (e) => {
+          state.studentId = cleanStudentId(e.target.value);
+        });
+      }
+    }
+
+    function renderQuotaTable(includeCurrent) {
+      const scoreCells = SCORE_COLUMNS.map((c) => `<td>${escapeHtml(scoreLabel(c.score))}</td>`).join("");
+      const targetCells = SCORE_COLUMNS.map((c) => `<td>${c.count}</td>`).join("");
+      const currentCells = SCORE_COLUMNS.map((c) => `<td>${includeCurrent ? columnFilled(c.score) : "-"}</td>`).join("");
+      const remainCells = SCORE_COLUMNS.map((c) => `<td>${includeCurrent ? columnRemaining(c.score) : "-"}</td>`).join("");
+
+      return `
+        <table class="quota-table">
+          <tbody>
+            <tr><th>점수</th>${scoreCells}</tr>
+            <tr><th>목표 개수</th>${targetCells}</tr>
+            ${includeCurrent ? `<tr><th>현재 개수</th>${currentCells}</tr><tr><th>남은 개수</th>${remainCells}</tr>` : ""}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function renderPreSort() {
+      const poolCards = state.pre.pool.map((id) => renderCard(id, { mode: "pre", draggable: false })).join("");
+      const bucket = (key, title, targetCount) => `
+        <div class="pre-bucket ${key}">
+          <div class="bucket-head">
+            <h3>${title}</h3>
+            <span class="badge">${state.pre[key].length}개</span>
+          </div>
+          <p class="muted">참고 최종 칸 수: ${targetCount}칸</p>
+          <div class="card-list">
+            ${state.pre[key].map((id) => renderCard(id, { mode: "bucket", draggable: false })).join("") || `<p class="muted">아직 분류된 문항이 없습니다.</p>`}
+          </div>
+        </div>
+      `;
+
+      appEl.innerHTML = `
+        <section class="main-panel">
+          <h2>STEP 2. 예비분류</h2>
+          <p>
+            먼저 40개 문항을 빠르게 읽고 <b>비동의 / 중립 / 동의</b> 세 묶음으로 나누어 주세요.
+            이 단계에서는 정확한 개수를 맞출 필요가 없습니다. 이후 점수표에서 얼마든지 조정할 수 있습니다.
+          </p>
+
+          <div class="qdist-summary">
+            <div><b>참고용 최종 배치 칸 수</b>: 비동의 ${countBySign("negative")}칸 / 중립 ${countBySign("neutral")}칸 / 동의 ${countBySign("positive")}칸</div>
+            <div><b>현재 예비분류</b>: ${preCompletedCount()} / ${totalStatementCount()}개 완료</div>
+          </div>
+
+          <div class="pre-layout">
+            <div class="pre-pool">
+              <div class="bucket-head">
+                <h3>분류할 문항</h3>
+                <span class="badge">남은 ${state.pre.pool.length}개</span>
+              </div>
+              <div class="card-list">
+                ${poolCards || `<p class="muted">모든 문항을 예비분류했습니다.</p>`}
+              </div>
+            </div>
+
+            ${bucket("disagree", "비동의 후보", countBySign("negative"))}
+            ${bucket("neutral", "중립/판단유보 후보", countBySign("neutral"))}
+            ${bucket("agree", "동의 후보", countBySign("positive"))}
+          </div>
+
+          <div class="actions">
+            <button type="button" onclick="goToStep(0)">← 이전 단계</button>
+            <button type="button" class="btn-primary" onclick="goPlacementStep()" ${isPreComplete() ? "" : "disabled"}>다음 단계: 문항 배치하기 →</button>
+          </div>
+
+          <div class="bottom-tip">💡 예비분류는 대략적인 방향 잡기입니다. 최종 배치 단계에서는 전체 격자를 보며 다시 바꿀 수 있습니다.</div>
+        </section>
+      `;
+
+      attachPreHandlers();
+    }
+
+    function renderPlacement() {
+      ensureGridInitialized();
+      const validation = validatePlacement();
+      const selected = state.selectedCardId ? statementById(state.selectedCardId) : null;
+
+      const gridHtml = SCORE_COLUMNS.map((col) => {
+        const type = col.score < 0 ? "negative" : col.score > 0 ? "positive" : "neutral";
+        const remaining = columnRemaining(col.score);
+        const statusClass = remaining === 0 ? "quota-full" : "quota-open";
+        const slots = (state.grid[col.score] || []).map((cardId, idx) => `
+          <div class="slot" data-score="${col.score}" data-slot-index="${idx}">
+            ${cardId ? renderCard(cardId, { mode: "slot" }) : `<span class="slot-empty-text">빈 칸</span>`}
+          </div>
+        `).join("");
+
+        return `
+          <div class="score-col">
+            <div class="score-head ${type} ${statusClass}">
+              <div style="font-size:18px;">${escapeHtml(scoreLabel(col.score))}</div>
+              <div class="quota-label">
+                목표 ${col.count}개<br>
+                현재 ${columnFilled(col.score)}개<br>
+                남은 ${remaining}개
+              </div>
+            </div>
+            <div class="slots">${slots}</div>
+          </div>
+        `;
+      }).join("");
+
+      appEl.innerHTML = `
+        <section class="main-panel">
+          <div class="grid-3">
+            <div class="info-box soft">
+              <h2>STEP 3. 문항 배치하기</h2>
+              <p>왼쪽의 카드를 아래 점수표의 빈 칸에 드래그하거나, 카드를 클릭한 뒤 빈 칸을 클릭하여 배치하세요.</p>
+              <p>이미 채워진 칸의 카드는 다른 칸으로 이동하거나 왼쪽 목록으로 되돌릴 수 있습니다.</p>
+            </div>
+            <div class="info-box">
+              <h3>배치 방법 안내</h3>
+              <ul class="intro-list">
+                <li>가장 강하게 동의하는 문항 2개를 +4에 먼저 배치해보세요.</li>
+                <li>가장 강하게 동의하지 않는 문항 2개를 -4에 배치해보세요.</li>
+                <li>그 다음 +3/-3, +2/-2, +1/-1 순서로 바깥쪽에서 안쪽으로 배치합니다.</li>
+                <li>마지막으로 중립(0)에 남은 문항을 배치합니다.</li>
+              </ul>
+            </div>
+            <div class="info-box">
+              <h3>점수 분포 안내</h3>
+              ${renderQuotaTable(true)}
+            </div>
+          </div>
+
+          <div class="qsort-layout" style="margin-top:12px;">
+            <aside class="side-panel">
+              <div class="bucket-head">
+                <h3>배치할 문항 카드</h3>
+                <span class="badge">남은 ${state.placementPool.length}개</span>
+              </div>
+              <div class="selected-hint">
+                ${selected ? `<b>선택됨:</b> ${escapeHtml(qid(selected.id))} — ${escapeHtml(selected.text)}` : "카드를 클릭하면 선택됩니다. 선택 후 원하는 빈 칸을 클릭해도 배치할 수 있습니다."}
+              </div>
+              <div id="poolDrop" class="pool-drop">
+                <div class="card-list">
+                  ${state.placementPool.map((id) => renderCard(id, { mode: "full" })).join("") || `<p class="muted">모든 카드가 점수표에 배치되었습니다.</p>`}
+                </div>
+              </div>
+            </aside>
+
+            <section class="score-grid-wrap">
+              <div class="qdist-summary">
+                <div><b>강제분포 현황</b>: 전체 ${totalSlotCount()}칸 중 ${placedCount()}개 배치 완료, ${totalStatementCount() - placedCount()}개 남음</div>
+                <div>${validation.ok ? `<span style="color:var(--green);font-weight:900;">모든 문항 배치 완료</span>` : `<span style="color:var(--danger);font-weight:900;">${escapeHtml(validation.message)}</span>`}</div>
+              </div>
+              <div class="score-grid">${gridHtml}</div>
+            </section>
+          </div>
+
+          <div class="actions">
+            <button type="button" onclick="goToStep(1)">← 이전 단계</button>
+            <div>
+              <button type="button" class="btn-danger" onclick="resetPlacement()">배치 초기화</button>
+              <button type="button" class="btn-primary" onclick="goReviewStep()" ${validation.ok ? "" : "disabled"}>다음 단계: 최종확인 →</button>
+            </div>
+          </div>
+
+          <div class="bottom-tip">💡 칸이 이미 찼더라도 더 적절한 문항이 있으면 기존 문항과 교체하세요. 이 방식이 뒤쪽 문항에 남은 점수가 몰리는 병목을 줄입니다.</div>
+        </section>
+      `;
+
+      attachPlacementHandlers();
+    }
+
+    function renderReview() {
+      ensureGridInitialized();
+      const validation = validatePlacement();
+      if (!validation.ok) {
+        alert(validation.message);
+        goToStep(2);
+        return;
+      }
+
+      const scoreMap = buildScoreMap();
+      const columnsSummary = SCORE_COLUMNS.map((col) => {
+        const ids = STATEMENTS.filter((s) => scoreMap[s.id] === col.score).map((s) => s.id);
+        return `
+          <div class="info-box">
+            <h3>${escapeHtml(scoreLabel(col.score))}점 (${ids.length}개)</h3>
+            <p>${ids.map((id) => `<b>${escapeHtml(qid(id))}</b>`).join(" &nbsp; ")}</p>
+          </div>
+        `;
+      }).join("");
+
+      const extremeIds = extremeStatementIds();
+      const commentsHtml = extremeIds.map((id) => {
+        const st = statementById(id);
+        const score = scoreMap[id];
+        return `
+          <div class="comment-box">
+            <h3>${escapeHtml(scoreLabel(score))}점 ${escapeHtml(qid(id))}</h3>
+            <p>${escapeHtml(st.text)}</p>
+            <label class="muted" for="comment_${id}">이 문항을 ${escapeHtml(scoreLabel(score))}점에 둔 이유를 적어 주세요. 선택 입력입니다.</label>
+            <textarea id="comment_${id}" data-comment-id="${id}" placeholder="이유를 입력하세요.">${escapeHtml(state.comments[id] || "")}</textarea>
+          </div>
+        `;
+      }).join("");
+
+      appEl.innerHTML = `
+        <section class="main-panel">
+          <h2>STEP 4. 최종확인</h2>
+          <p>전체 배치를 다시 확인해 주세요. 특히 +4와 -4에 놓인 문항이 본인의 생각을 가장 잘 보여주는지 확인한 뒤 제출합니다.</p>
+
+          <div class="qdist-summary">
+            <div><b>최종 분포</b>: ${SCORE_COLUMNS.map((c) => `${scoreLabel(c.score)}=${columnFilled(c.score)}개`).join(" / ")}</div>
+            <div><b>정렬 결과</b>: <span class="muted">${escapeHtml(sortString())}</span></div>
+          </div>
+
+          <div class="review-grid">
+            <div>
+              <h3>점수별 배치 요약</h3>
+              <div class="extreme-list">${columnsSummary}</div>
+            </div>
+            <div>
+              <h3>양극단 문항 확인</h3>
+              <div class="extreme-list">${commentsHtml}</div>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button type="button" onclick="goToStep(2)">← 다시 배치하기</button>
+            <div>
+              <button type="button" class="btn-light" onclick="downloadLocalJson()">JSON 백업 다운로드</button>
+              <button type="button" class="btn-primary" onclick="submitToGoogleSheets()">제출하기 →</button>
+            </div>
+          </div>
+        </section>
+      `;
+
+      document.querySelectorAll("[data-comment-id]").forEach((el) => {
+        el.addEventListener("input", (e) => {
+          state.comments[e.target.dataset.commentId] = e.target.value;
+        });
+      });
+    }
+
+    function renderDone() {
+      appEl.innerHTML = `
+        <section class="main-panel">
+          <h2>제출이 완료되었습니다.</h2>
+          <p>응답해 주셔서 감사합니다.</p>
+          <div class="info-box soft">
+            <p><b>제출 시각:</b> ${escapeHtml(state.submittedAt ? state.submittedAt.toLocaleString("ko-KR") : new Date().toLocaleString("ko-KR"))}</p>
+            <p class="muted">브라우저의 no-cors 제출 방식 특성상 화면에서는 Google Sheets의 실제 응답 본문을 읽지 않습니다. 연구자는 Google Sheets의 responses 시트에서 저장 여부를 확인할 수 있습니다.</p>
+          </div>
+        </section>
+      `;
+    }
+
+    function render() {
+      renderStepper();
+      if (state.step === 0) renderIntro();
+      else if (state.step === 1) renderPreSort();
+      else if (state.step === 2) renderPlacement();
+      else if (state.step === 3) renderReview();
+      else renderDone();
+    }
+
+    /**********************************************************************
+     * 8. 이벤트 연결
+     **********************************************************************/
+
+    function attachPreHandlers() {
+      document.querySelectorAll("[data-pre-move]").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          movePre(e.currentTarget.dataset.cardId, e.currentTarget.dataset.preMove);
+        });
+      });
+
+      document.querySelectorAll("[data-pre-return]").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          returnPreToPool(e.currentTarget.dataset.cardId);
+        });
+      });
+    }
+
+    function attachPlacementHandlers() {
+      document.querySelectorAll("[data-card-id]").forEach((el) => {
+        el.addEventListener("click", (e) => {
+          e.stopPropagation();
+          selectCard(e.currentTarget.dataset.cardId);
+        });
+
+        el.addEventListener("dragstart", (e) => {
+          e.currentTarget.classList.add("dragging");
+          e.dataTransfer.setData("text/plain", e.currentTarget.dataset.cardId);
+          e.dataTransfer.effectAllowed = "move";
+        });
+
+        el.addEventListener("dragend", (e) => {
+          e.currentTarget.classList.remove("dragging");
+        });
+      });
+
+      document.querySelectorAll(".slot").forEach((slot) => {
+        slot.addEventListener("dragover", (e) => {
+          e.preventDefault();
+          slot.classList.add("drag-over");
+        });
+
+        slot.addEventListener("dragleave", () => {
+          slot.classList.remove("drag-over");
+        });
+
+        slot.addEventListener("drop", (e) => {
+          e.preventDefault();
+          slot.classList.remove("drag-over");
+          const cardId = e.dataTransfer.getData("text/plain");
+          if (cardId) movePlacementToSlot(cardId, slot.dataset.score, slot.dataset.slotIndex);
+        });
+
+        slot.addEventListener("click", (e) => {
+          e.stopPropagation();
+          if (state.selectedCardId) {
+            movePlacementToSlot(state.selectedCardId, slot.dataset.score, slot.dataset.slotIndex);
+          }
+        });
+      });
+
+      const poolDrop = document.getElementById("poolDrop");
+      if (poolDrop) {
+        poolDrop.addEventListener("dragover", (e) => {
+          e.preventDefault();
+          poolDrop.classList.add("drag-over");
+        });
+
+        poolDrop.addEventListener("dragleave", () => {
+          poolDrop.classList.remove("drag-over");
+        });
+
+        poolDrop.addEventListener("drop", (e) => {
+          e.preventDefault();
+          poolDrop.classList.remove("drag-over");
+          const cardId = e.dataTransfer.getData("text/plain");
+          if (cardId) movePlacementToPool(cardId);
+        });
+      }
+    }
+
+    /**********************************************************************
+     * 9. 전역 버튼 함수
+     **********************************************************************/
+
+    function startSurvey() {
+      const studentId = cleanStudentId(document.getElementById("studentIdInput")?.value || state.studentId);
+      state.studentId = studentId;
+
+      if (REQUIRE_STUDENT_ID && !studentId) {
+        alert("학번 또는 참여자코드를 입력해 주세요.");
+        return;
+      }
+
+      if (totalSlotCount() !== totalStatementCount()) {
+        alert(`강제분포 칸 수(${totalSlotCount()})와 문항 수(${totalStatementCount()})가 일치하지 않습니다. SCORE_COLUMNS 또는 STATEMENTS를 확인하세요.`);
+        return;
+      }
+
+      goToStep(1);
+    }
+
+    function goPlacementStep() {
+      if (!isPreComplete()) {
+        alert(`아직 예비분류하지 않은 문항이 ${state.pre.pool.length}개 있습니다.`);
+        return;
+      }
+      ensureGridInitialized();
+      goToStep(2);
+    }
+
+    function goReviewStep() {
+      const validation = validatePlacement();
+      if (!validation.ok) {
+        alert(validation.message);
+        return;
+      }
+      goToStep(3);
+    }
+
+    function resetPlacement() {
+      if (!confirm("현재 점수표 배치를 모두 초기화하고 예비분류 결과에서 다시 시작할까요?")) return;
+      initializeGrid();
+      render();
+    }
+
+    function resetAll() {
+      if (!confirm("모든 응답을 초기화할까요?")) return;
+      state.step = 0;
+      state.stepStartedAt = Date.now();
+      state.durations = [0, 0, 0, 0, 0, 0];
+      state.studentId = urlUserCode;
+      state.pre = {
+        pool: STATEMENTS.map((s) => s.id),
+        disagree: [],
+        neutral: [],
+        agree: []
+      };
+      state.gridInitialized = false;
+      state.placementPool = [];
+      state.grid = {};
+      state.selectedCardId = null;
+      state.comments = {};
+      render();
+      showToast("초기화되었습니다.");
+    }
+
+    window.startSurvey = startSurvey;
+    window.goToStep = goToStep;
+    window.goPlacementStep = goPlacementStep;
+    window.goReviewStep = goReviewStep;
+    window.resetPlacement = resetPlacement;
+    window.resetAll = resetAll;
+    window.submitToGoogleSheets = submitToGoogleSheets;
+    window.downloadLocalJson = downloadLocalJson;
+
+    /**********************************************************************
+     * 10. 시작
+     **********************************************************************/
+
+    render();
+  </script>
+</body>
+</html>

@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Q-sort 카드형 격자 설문</title>
+  <title>한국공대 학습경험 Q설문조사</title>
   <style>
     :root {
       --bg: #f6f1e8;
@@ -472,6 +472,51 @@
       resize: vertical;
     }
 
+    .survey-notice {
+      background: #fff7ed;
+      border-color: #fed7aa;
+    }
+
+    .notice-lines p {
+      margin: 6px 0;
+    }
+
+    .required-mark {
+      color: #dc2626;
+      font-weight: 900;
+    }
+
+    .checkbox-row {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      padding: 12px;
+      border: 1px solid #d7dce2;
+      border-radius: 10px;
+      background: #ffffff;
+      margin: 10px 0;
+      cursor: pointer;
+    }
+
+    .checkbox-row input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      margin-top: 3px;
+      flex: 0 0 auto;
+    }
+
+    .field-help {
+      margin-top: 6px;
+      font-size: 13px;
+      color: #6b7280;
+    }
+
+    .privacy-box {
+      margin-top: 12px;
+      border-color: #bfdbfe;
+      background: #eff6ff;
+    }
+
     .range-chip {
       display: inline-flex;
       align-items: center;
@@ -792,8 +837,8 @@
      * 1. 반드시 수정할 설정값
      **********************************************************************/
 
-    const STUDY_TITLE = "40문항 Q-sort 설문";
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbymyjiodOR4eICiEC9At_fRQrH5eIYQSDjWA2FgE-RVA62Q3yic3bNg_hFqFh8lpqMd_g/exec";
+    const STUDY_TITLE = "한국공대 학습경험 Q설문조사";
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzi1tmqzlamZGLv5S4S5bHwSRcFS1JhR1FCujkiOqXDxl8b6l0yPWe180zWh4ip6qrjcQ/exec";
 
     // Apps Script에 action=checkStudentId JSONP 중복확인 기능을 넣은 경우 true.
     // 해당 기능을 아직 넣지 않았다면 false로 바꾸세요.
@@ -806,7 +851,7 @@
     // 제출 시 응답 데이터를 브라우저 localStorage에도 임시 저장합니다.
     const SAVE_LOCAL_BACKUP_ON_SUBMIT = true;
 
-    // 학번/참여자코드 입력 필수 여부.
+    // 학번 입력 필수 여부.
     const REQUIRE_STUDENT_ID = true;
 
     // 40문항 권장 강제분포: 2-3-5-6-8-6-5-3-2.
@@ -903,6 +948,9 @@
       choiceScores: {},
       selectedCardId: null,
       comments: {},
+      privacyConsent: false,
+      privacyConsentAt: "",
+      phoneNumber: "",
       isSubmitting: false,
       submittedAt: null
     };
@@ -951,6 +999,26 @@
       const text = String(value || "").trim();
       if (!text || text === "---" || text.toLowerCase() === "undefined") return "";
       return text.replace(/[\s-]/g, "");
+    }
+
+    function cleanPhoneNumber(value) {
+      return String(value || "").replace(/[^0-9]/g, "");
+    }
+
+    function formatPhoneForDisplay(value) {
+      const digits = cleanPhoneNumber(value);
+      if (digits.length === 11) {
+        return digits.replace(/(\d{3})(\d{4})(\d{4})/, "$1-$2-$3");
+      }
+      if (digits.length === 10) {
+        return digits.replace(/(\d{3})(\d{3})(\d{4})/, "$1-$2-$3");
+      }
+      return String(value || "");
+    }
+
+    function isValidPhoneNumber(value) {
+      const digits = cleanPhoneNumber(value);
+      return /^01[0-9]{8,9}$/.test(digits);
     }
 
     function totalStatementCount() {
@@ -1348,6 +1416,59 @@
      * 6. Google Sheets 제출 로직
      **********************************************************************/
 
+    function saveConsentFieldsFromReview() {
+      const consentInput = document.getElementById("privacyConsentInput");
+      const phoneInput = document.getElementById("phoneNumberInput");
+
+      if (consentInput) {
+        const wasConsent = state.privacyConsent;
+        state.privacyConsent = !!consentInput.checked;
+        if (!wasConsent && state.privacyConsent && !state.privacyConsentAt) {
+          state.privacyConsentAt = new Date().toISOString();
+        }
+        if (!state.privacyConsent) {
+          state.privacyConsentAt = "";
+        }
+      }
+
+      if (phoneInput) {
+        state.phoneNumber = phoneInput.value || "";
+      }
+    }
+
+    function validateRequiredFinalFields() {
+      saveConsentFieldsFromReview();
+
+      if (!state.privacyConsent) {
+        return {
+          ok: false,
+          message: "개인정보 수집·이용 동의는 필수입니다. 동의 여부를 체크해 주세요."
+        };
+      }
+
+      const phoneDigits = cleanPhoneNumber(state.phoneNumber);
+      if (!phoneDigits) {
+        return {
+          ok: false,
+          message: "핸드폰번호를 입력해 주세요. 기념품 수령을 위해 정확하게 기재 필수!"
+        };
+      }
+
+      if (!isValidPhoneNumber(phoneDigits)) {
+        return {
+          ok: false,
+          message: "핸드폰번호 형식이 올바르지 않습니다. 예: 010-1234-5678 또는 01012345678"
+        };
+      }
+
+      state.phoneNumber = phoneDigits;
+      if (state.privacyConsent && !state.privacyConsentAt) {
+        state.privacyConsentAt = new Date().toISOString();
+      }
+
+      return { ok: true, message: "ok" };
+    }
+
     function buildPayload(options) {
       const opts = options || {};
       if (opts.recordDuration !== false) {
@@ -1360,6 +1481,7 @@
       const nneu = values.filter((v) => v === 0).length;
       const nneg = values.filter((v) => v < 0).length;
       const studentId = cleanStudentId(state.studentId || state.urlUserCode);
+      const phoneDigits = cleanPhoneNumber(state.phoneNumber);
 
       const payload = {
         studyTitle: STUDY_TITLE,
@@ -1386,7 +1508,15 @@
         preNeutralAllowedScores: "0",
         preAgreeAllowedScores: "1|2|3|4",
         userAgent: navigator.userAgent,
-        form0: studentId
+        privacyConsent: state.privacyConsent ? "Y" : "N",
+        privacyConsentText: "개인정보 수집·이용에 동의합니다.",
+        privacyConsentAt: state.privacyConsentAt || "",
+        phoneNumber: phoneDigits,
+        phoneNumberFormatted: formatPhoneForDisplay(phoneDigits),
+        giftContactPhone: phoneDigits,
+        form0: studentId,
+        form1: state.privacyConsent ? "개인정보 수집·이용 동의" : "",
+        form2: phoneDigits
       };
 
       state.durations.forEach((sec, idx) => {
@@ -1603,8 +1733,14 @@
       state.studentId = studentId;
 
       if (REQUIRE_STUDENT_ID && !studentId) {
-        alert("학번 또는 참여자코드를 입력해 주세요.");
+        alert("학번을 입력해 주세요.");
         goToStep(0);
+        return;
+      }
+
+      const finalFieldsValidation = validateRequiredFinalFields();
+      if (!finalFieldsValidation.ok) {
+        alert(finalFieldsValidation.message);
         return;
       }
 
@@ -1631,12 +1767,12 @@
           }
 
           if (check && check.invalid) {
-            alert("학번 또는 참여자코드 형식이 올바르지 않습니다.");
+            alert("학번 형식이 올바르지 않습니다.");
             return;
           }
 
           if (check && check.exists) {
-            alert("이미 제출된 학번/참여자코드입니다. 동일 코드로는 중복 응답할 수 없습니다.");
+            alert("이미 제출된 학번입니다. 동일 학번으로는 중복 응답할 수 없습니다.");
             return;
           }
         }
@@ -1846,7 +1982,20 @@
           <div class="title-row">
             <div>
               <h1>${escapeHtml(STUDY_TITLE)}</h1>
-              <p class="muted">40개 문항을 먼저 비동의·중립·동의로 예비분류한 뒤, 해당 분류 안에서만 세부 점수를 선택하는 Q-sort 설문입니다.</p>
+              <p class="muted">한국공학대학교 재(휴)학경험이 있는 학생을 대상으로 하는 학습경험 Q설문조사입니다.</p>
+            </div>
+          </div>
+
+          <div class="info-box survey-notice" style="margin-bottom:12px;">
+            <h3>설문 안내</h3>
+            <div class="notice-lines">
+              <p>안녕하세요.</p>
+              <p>한국공학대학교 재(휴)학경험이 있는 학생 대상으로 IR센터에서는 학습경험조사(Q방법)를 실시하고 있습니다.</p>
+              <p>귀 학생의 소중한 경험에 대한 의견을 듣고, 학교 교육서비스 품질 개선에 활용하고자 하오니, 솔직하게 응답해주시기 바랍니다.</p>
+              <p><b>응답문항:</b> 40문항</p>
+              <p><b>응답소요시간:</b> 약 4~5분</p>
+              <p><b>참여혜택:</b> 응답완료자 전원 메가커피 1만원 상당 기프티콘 발송(7월 말 발송)</p>
+              <p><b>-한국공학대학교 IR센터(031-8041-0202)</b></p>
             </div>
           </div>
 
@@ -1866,12 +2015,12 @@
             </div>
 
             <div class="info-box">
-              <h3>참여자 정보</h3>
+              <h3>응답자 정보</h3>
               <div class="form-row">
-                <label for="studentIdInput">학번/참여자코드</label>
-                <input id="studentIdInput" class="input" value="${escapeHtml(state.studentId)}" placeholder="예: 20231234 또는 P001" ${urlUserCode ? "readonly" : ""} />
+                <label for="studentIdInput">학번</label>
+                <input id="studentIdInput" class="input" value="${escapeHtml(state.studentId)}" placeholder="예: 20231234" ${urlUserCode ? "readonly" : ""} />
               </div>
-              ${urlUserCode ? `<p class="muted">URL의 userCode 값이 자동 적용되었습니다.</p>` : `<p class="muted">동일 학번 중복응답 제한을 사용하는 경우 반드시 입력하게 하세요.</p>`}
+              ${urlUserCode ? `<p class="muted">URL의 userCode 값이 학번으로 자동 적용되었습니다.</p>` : `<p class="muted">오타없이 정확하게 기재필수!</p>`}
             </div>
           </div>
 
@@ -2094,6 +2243,35 @@
             </div>
           </div>
 
+          <div class="info-box privacy-box">
+            <h3>개인정보동의여부 및 연락처 입력 <span class="required-mark">*</span></h3>
+            <p>
+              응답완료자 기념품(메가커피 1만원 상당 기프티콘) 발송을 위해 개인정보 수집·이용 동의와 핸드폰번호 입력이 필요합니다.
+              입력하신 핸드폰번호는 기념품 발송 목적으로만 활용됩니다.
+            </p>
+
+            <label class="checkbox-row" for="privacyConsentInput">
+              <input id="privacyConsentInput" type="checkbox" ${state.privacyConsent ? "checked" : ""} />
+              <span>
+                개인정보 수집·이용에 동의합니다.
+                <span class="required-mark">(필수)</span>
+              </span>
+            </label>
+
+            <div class="form-row">
+              <label for="phoneNumberInput">핸드폰번호 <span class="required-mark">*</span></label>
+              <input
+                id="phoneNumberInput"
+                class="input"
+                inputmode="tel"
+                autocomplete="tel"
+                placeholder="예: 010-1234-5678"
+                value="${escapeHtml(formatPhoneForDisplay(state.phoneNumber))}"
+              />
+            </div>
+            <p class="field-help">기념품 수령을 위해 정확하게 기재 필수!</p>
+          </div>
+
           <div class="actions">
             <button type="button" onclick="goToStep(2)">← 다시 점수 선택하기</button>
             <div>
@@ -2109,6 +2287,32 @@
           state.comments[e.target.dataset.commentId] = e.target.value;
         });
       });
+
+      const privacyInput = document.getElementById("privacyConsentInput");
+      if (privacyInput) {
+        privacyInput.addEventListener("change", (e) => {
+          const wasConsent = state.privacyConsent;
+          state.privacyConsent = !!e.target.checked;
+          if (!wasConsent && state.privacyConsent && !state.privacyConsentAt) {
+            state.privacyConsentAt = new Date().toISOString();
+          }
+          if (!state.privacyConsent) {
+            state.privacyConsentAt = "";
+          }
+        });
+      }
+
+      const phoneInput = document.getElementById("phoneNumberInput");
+      if (phoneInput) {
+        phoneInput.addEventListener("input", (e) => {
+          state.phoneNumber = e.target.value || "";
+        });
+        phoneInput.addEventListener("blur", (e) => {
+          const formatted = formatPhoneForDisplay(e.target.value);
+          e.target.value = formatted;
+          state.phoneNumber = formatted;
+        });
+      }
     }
 
     function renderDone() {
@@ -2174,7 +2378,7 @@
       state.studentId = studentId;
 
       if (REQUIRE_STUDENT_ID && !studentId) {
-        alert("학번 또는 참여자코드를 입력해 주세요.");
+        alert("학번을 입력해 주세요.");
         return;
       }
 
@@ -2238,6 +2442,9 @@
       state.choiceScores = {};
       state.selectedCardId = null;
       state.comments = {};
+      state.privacyConsent = false;
+      state.privacyConsentAt = "";
+      state.phoneNumber = "";
       render();
       showToast("초기화되었습니다.");
     }
